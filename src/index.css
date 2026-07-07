@@ -1,0 +1,273 @@
+/* 全局设计系统与 Element Plus 主题定制 (雅致白/极光微光主题) */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* 品牌色彩 - 极光霓虹蓝紫系 (明亮版) */
+  --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #db2777 100%);
+  --secondary-gradient: linear-gradient(90deg, #2563eb 0%, #4f46e5 100%);
+  --hover-gradient: linear-gradient(135deg, #3730a3 0%, #6d28d9 50%, #be185d 100%);
+  
+  /* 柔和的环境光晕背景 */
+  --bg-glow-1: radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.07) 0%, transparent 45%);
+  --bg-glow-2: radial-gradient(circle at 85% 85%, rgba(236, 72, 153, 0.05) 0%, transparent 45%);
+
+  /* 磨砂玻璃变量 (白色主题) */
+  --glass-bg: rgba(255, 255, 255, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --glass-glow: rgba(99, 102, 241, 0.1);
+
+  /* Element Plus 变量覆写 (高贵浅色版) */
+  --el-bg-color: #ffffff;
+  --el-bg-color-overlay: #f8fafc;
+  --el-color-primary: #4f46e5;
+  --el-color-primary-light-3: #6366f1;
+  --el-color-primary-light-5: #818cf8;
+  --el-color-primary-light-7: #a5b4fc;
+  --el-color-primary-light-8: #c7d2fe;
+  --el-color-primary-light-9: #e0e7ff;
+  --el-color-primary-dark-2: #3730a3;
+  
+  --el-color-success: #10b981;
+  --el-color-warning: #f59e0b;
+  --el-color-danger: #ef4444;
+  --el-color-info: #64748b;
+
+  --el-border-color: rgba(15, 23, 42, 0.08);
+  --el-border-color-light: rgba(15, 23, 42, 0.05);
+  --el-border-color-lighter: rgba(15, 23, 42, 0.03);
+  
+  --el-text-color-primary: #0f172a;
+  --el-text-color-regular: #334155;
+  --el-text-color-secondary: #64748b;
+  --el-text-color-placeholder: #94a3b8;
+  
+  --el-fill-color-blank: rgba(255, 255, 255, 0.6);
+  --el-border-radius-base: 12px;
+  --el-border-radius-small: 8px;
+
+  /* 主题特有卡片配置 (白色模式) */
+  --dropzone-bg: rgba(255, 255, 255, 0.45);
+  --dropzone-border: rgba(99, 102, 241, 0.2);
+  --dropzone-hover-bg: rgba(99, 102, 241, 0.03);
+  --card-bg-subtle: rgba(248, 250, 252, 0.65);
+  --border-subtle: rgba(15, 23, 42, 0.05);
+  --result-card-bg: linear-gradient(135deg, rgba(99, 102, 241, 0.04) 0%, rgba(236, 72, 153, 0.02) 100%);
+  --result-card-border: rgba(99, 102, 241, 0.12);
+  --code-bg: rgba(15, 23, 42, 0.05);
+  --tip-code-color: #4f46e5;
+  --progress-track-bg: rgba(15, 23, 42, 0.03);
+}
+
+/* 基础样式重置 */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: 'Plus Jakarta Sans', 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #f1f5f9;
+  color: var(--el-text-color-primary);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 渐变流光背景 */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: var(--bg-glow-1), var(--bg-glow-2);
+  pointer-events: none;
+  z-index: -1;
+  animation: pulseGlow 15s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGlow {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 1.2;
+    transform: scale(1.03);
+  }
+}
+
+/* 美化全局滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.02);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.2);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.4);
+}
+
+/* 全局卡片美化 */
+.el-card {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(15, 23, 42, 0.02) !important;
+  border-radius: 20px !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.el-card:hover {
+  border-color: rgba(99, 102, 241, 0.15) !important;
+  box-shadow: 0 16px 40px -10px rgba(15, 23, 42, 0.12), 0 0 15px 0 rgba(99, 102, 241, 0.05) !important;
+}
+
+/* 全局按钮微动效 */
+.el-button {
+  border-radius: 10px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.el-button:not(.is-disabled):active {
+  transform: scale(0.96);
+}
+
+.el-button--primary {
+  background: var(--secondary-gradient) !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+.el-button--primary:hover:not(.is-disabled) {
+  background: var(--secondary-gradient) !important;
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
+}
+
+.el-button--success {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+}
+
+.el-button--success:hover:not(.is-disabled) {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+}
+
+.el-button--danger.is-plain {
+  background: rgba(239, 68, 68, 0.05) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+  color: #ef4444 !important;
+}
+
+.el-button--danger.is-plain:hover:not(.is-disabled) {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
+}
+
+/* Tabs 精美覆写 */
+.el-tabs__nav-wrap::after {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+
+.el-tabs__item {
+  color: var(--el-text-color-secondary) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s !important;
+  height: 48px !important;
+  line-height: 48px !important;
+}
+
+.el-tabs__item.is-active {
+  color: #4f46e5 !important;
+  font-weight: 600 !important;
+}
+
+.el-tabs__active-bar {
+  background: var(--secondary-gradient) !important;
+  height: 3px !important;
+  border-radius: 99px;
+}
+
+/* 输入框定制 */
+.el-input__inner {
+  font-family: inherit;
+}
+
+.el-input__wrapper {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: none !important;
+  border-radius: 10px !important;
+  transition: all 0.3s !important;
+}
+
+.el-input__wrapper.is-focus, .el-input__wrapper:hover {
+  border-color: rgba(99, 102, 241, 0.4) !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.08) !important;
+}
+
+/* Tree 树形控件样式升级 */
+.el-tree {
+  background: transparent !important;
+  color: var(--el-text-color-regular) !important;
+}
+
+.el-tree-node__content {
+  height: 32px !important;
+  border-radius: 6px;
+  transition: all 0.2s;
+  padding: 4px 8px !important;
+}
+
+.el-tree-node__content:hover {
+  background-color: rgba(15, 23, 42, 0.03) !important;
+  color: var(--el-text-color-primary) !important;
+}
+
+.el-tree-node.is-current > .el-tree-node__content {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  color: #4f46e5 !important;
+  font-weight: 500;
+}
+
+/* 进度条美化 */
+.el-progress-bar__inner {
+  background: var(--secondary-gradient) !important;
+  border-radius: 99px !important;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+}
+
+.el-progress-bar__outer {
+  background-color: var(--progress-track-bg) !important;
+  border-radius: 99px !important;
+  border: 1px solid rgba(0, 0, 0, 0.01);
+}
+
+/* 分割线美化 */
+.el-divider {
+  border-top-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+/* 适配移动端的通用 Helper 类 */
+@media (max-width: 768px) {
+  .el-message {
+    min-width: 90% !important;
+  }
+}
