@@ -29,7 +29,6 @@
 </template>
 
 <script setup>
-import axios from 'axios'
 import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { settings, setBaseUrl, baseURL } from '../store/settings'
@@ -54,11 +53,11 @@ function reset() {
 async function testNetwork() {
 	testing.value = true
 	try {
-		await axios.get('/api/process/status', {
-			baseURL: form.baseUrl.trim() || '/',
-			params: { sessionId: 'network-test' },
-			timeout: 5000
-		})
+		const base = (form.baseUrl.trim() || '/').replace(/\/+$/, '')
+		const url = new URL(`${base}/api/process/status`, window.location.origin)
+		url.searchParams.set('sessionId', 'network-test')
+		const response = await fetch(url, { signal: AbortSignal.timeout(5000) })
+		if (!response.ok) throw new Error(`HTTP ${response.status}`)
 		ElMessage.success('网络连接成功，服务端响应正常')
 	} catch (error) {
 		ElMessage.error(`网络连接失败：${error.message}`)

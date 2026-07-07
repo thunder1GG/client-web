@@ -1,20 +1,38 @@
-import axios from 'axios'
 import SparkMD5 from 'spark-md5'
 import { getBaseURL } from '../store/settings'
 
-const api = axios.create({
-	timeout: 120000
-})
+/** 根据当前通讯地址生成完整请求地址。 */
+function resolveUrl(path, params) {
+	const base = (getBaseURL() || '').replace(/\/+$/, '')
+	const url = /^https?:\/\//i.test(path)
+		? new URL(path)
+		: new URL(`${base}${path}`, window.location.origin)
+	for (const [key, value] of Object.entries(params || {})) url.searchParams.set(key, value)
+	return url
+}
 
-api.interceptors.request.use((config) => {
-	const base = getBaseURL()
-	if (base) config.baseURL = base
-	else delete config.baseURL
-	return config
-})
+/** 使用 fetch 发起带超时、取消和 HTTP 状态检查的请求。 */
+async function request(path, { params, timeout = 120000, signal, ...options } = {}) {
+	const controller = new AbortController()
+	const abort = () => controller.abort(signal.reason)
+	if (signal?.aborted) abort()
+	else signal?.addEventListener('abort', abort, { once: true })
+	const timer = setTimeout(() => controller.abort(new Error('请求超时')), timeout)
+	try {
+		const response = await fetch(resolveUrl(path, params), { ...options, signal: controller.signal })
+		if (!response.ok) {
+			const message = await response.text()
+			throw new Error(`HTTP ${response.status}${message ? `: ${message}` : ''}`)
+		}
+		return response
+	} finally {
+		clearTimeout(timer)
+		signal?.removeEventListener('abort', abort)
+	}
+}
 
 // ===== 上传：分片断点续传 =====
-let uploadController = { paused: false, cancelTokenSource: null }
+let uploadController = { paused: false, abortController: null }
 
 export async function computeFileMd5(file) {
 	return new Promise((resolve, reject) => {
@@ -50,17 +68,22 @@ export async function computeFileMd5(file) {
 
 export async function uploadFileInChunks({ file, fileMd5, chunkSize = 2 * 1024 * 1024, onProgress, onSession, onPause, onResume, overrideFileName, originalFileName }) {
 	uploadController.paused = false
-	uploadController.cancelTokenSource?.cancel('restart')
-	uploadController.cancelTokenSource = axios.CancelToken.source()
+	uploadController.abortController?.abort(new Error('restart'))
+	uploadController.abortController = new AbortController()
+	const signal = uploadController.abortController.signal
 
 	// 1) 初始化上传会话，获取sessionId和已上传的字节数
-	const initResp = await api.post('/api/upload/init', { filename: overrideFileName || file.name, originalFilename: originalFileName, size: file.size, md5: fileMd5, chunkSize })
-	const { sessionId, uploadedBytes = 0 } = initResp.data
+	const initResp = await request('/api/upload/init', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ filename: overrideFileName || file.name, originalFilename: originalFileName, size: file.size, md5: fileMd5, chunkSize }),
+		signal
+	})
+	const { sessionId, uploadedBytes = 0 } = await initResp.json()
 	onSession?.(sessionId)
 
 	let offset = uploadedBytes
 	const total = file.size
-	let lastReported = 0
 
 	while (offset < total) {
 		if (uploadController.paused) {
@@ -75,30 +98,33 @@ export async function uploadFileInChunks({ file, fileMd5, chunkSize = 2 * 1024 *
 			'X-Upload-Session': sessionId,
 			'Content-Type': 'application/octet-stream'
 		}
-		await api.put('/api/upload/chunk', chunk, {
+		await request('/api/upload/chunk', {
+			method: 'PUT',
 			headers,
-			cancelToken: uploadController.cancelTokenSource.token,
-			onUploadProgress: (e) => {
-				const loaded = Math.min(end, offset + e.loaded)
-				const percent = Math.floor((loaded / total) * 100)
-				if (percent !== lastReported) {
-					lastReported = percent
-					onProgress?.(percent)
-				}
-			}
+			body: chunk,
+			signal
 		})
 		offset = end
 		onProgress?.(Math.floor((offset / total) * 100))
 	}
 
-	await api.post('/api/upload/complete', { sessionId })
+	await request('/api/upload/complete', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ sessionId }),
+		signal
+	})
 	return { sessionId, alreadyUploadedBytes: uploadedBytes }
 }
 
 // 新增：完成目录上传后，请求后端创建ZIP压缩包
 export async function completeDirectoryUpload(sessionIds) {
-	const resp = await api.post('/api/upload/complete-directory', { sessionIds })
-	return resp.data // { status: 'processing'|'done', fileName, size, downloadUrl }
+	const resp = await request('/api/upload/complete-directory', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ sessionIds })
+	})
+	return resp.json() // { status: 'processing'|'done', fileName, size, downloadUrl }
 }
 
 uploadFileInChunks.pause = function () {
@@ -122,8 +148,8 @@ function waitUntilResumed() {
 
 // ===== 轮询处理状态 =====
 export async function queryProcessStatus(sessionId) {
-	const resp = await api.get('/api/process/status', { params: { sessionId } })
-	return resp.data // { status: 'processing'|'done'|'queued', fileName, size, downloadUrl }
+	const resp = await request('/api/process/status', { params: { sessionId } })
+	return resp.json() // { status: 'processing'|'done'|'queued', fileName, size, downloadUrl }
 }
 
 // ===== 下载：断点续传 =====
@@ -136,8 +162,8 @@ export async function downloadWithResume({ url, fileName, onProgress, onPause, o
 	downloadController.fileName = fileName
 
 	// 先获取文件大小
-	const head = await api.head(url)
-	const totalSize = Number(head.headers['content-length'] || 0)
+	const head = await request(url, { method: 'HEAD' })
+	const totalSize = Number(head.headers.get('content-length') || 0)
 	downloadController.contentLength = totalSize
 
 	while (downloadController.currentOffset < totalSize) {
@@ -147,11 +173,10 @@ export async function downloadWithResume({ url, fileName, onProgress, onPause, o
 			onResume?.()
 		}
 		const end = Math.min(downloadController.currentOffset + 2 * 1024 * 1024 - 1, totalSize - 1)
-		const resp = await api.get(url, {
-			responseType: 'arraybuffer',
+		const resp = await request(url, {
 			headers: { Range: `bytes=${downloadController.currentOffset}-${end}` }
 		})
-		downloadController.receivedChunks.push(resp.data)
+		downloadController.receivedChunks.push(await resp.arrayBuffer())
 		downloadController.currentOffset = end + 1
 		onProgress?.(Math.floor((downloadController.currentOffset / totalSize) * 100))
 	}
@@ -191,5 +216,4 @@ function triggerDownload(blob, fileName) {
 		document.body.removeChild(a)
 	}, 0)
 }
-
 
